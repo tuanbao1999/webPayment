@@ -15,9 +15,15 @@ export async function GET() {
   }
 }
 
-export async function POST() {
-  return NextResponse.json(
-    { error: "Thêm mức giá: sửa trực tiếp sheet MucGia trên Google Sheets" },
-    { status: 501 }
-  );
+export async function POST(request: Request) {
+  try {
+    const { amount, label, isDefault } = await request.json();
+    const tier = await sheetsRequest("addPriceTier", { amount, label, isDefault });
+    return NextResponse.json(tier);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Lỗi" },
+      { status: 400 }
+    );
+  }
 }

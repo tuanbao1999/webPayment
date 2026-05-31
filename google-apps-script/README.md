@@ -53,10 +53,18 @@ Hoặc form POST trực tiếp tới URL đó (Apps Script `doPost` nhận field
 | ChiTieu | Mỗi bill |
 | ChiTiet | Ai nợ bao nhiêu, cột **daCK** |
 
+## Cập nhật script
+
+Sau khi sửa `WebApp.gs` (thêm xóa, v.v.): **Deploy → Manage deployments → Edit → New version** → Deploy.
+
 ## API actions (POST JSON)
 
 ```json
 { "action": "createExpense", "expenseDate": "2026-05-31", ... }
+{ "action": "deletePerson", "id": "..." }
+{ "action": "deleteFrequentGroup", "id": "..." }
+{ "action": "deletePriceTier", "id": "..." }
+{ "action": "addPriceTier", "amount": 50000, "label": "50k" }
 ```
 
 GET: `?action=getPeople`, `?action=getExpensesByDate&date=2026-05-31`, …

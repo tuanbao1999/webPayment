@@ -171,8 +171,16 @@ function handleAction_(action, params) {
       return getPriceTiers_();
     case "addPerson":
       return addPerson_(params.name);
+    case "deletePerson":
+      return deletePerson_(params.id);
     case "addFrequentGroup":
       return addFrequentGroup_(params.label, params.personIds || []);
+    case "deleteFrequentGroup":
+      return deleteFrequentGroup_(params.id);
+    case "addPriceTier":
+      return addPriceTier_(params.amount, params.label, params.isDefault);
+    case "deletePriceTier":
+      return deletePriceTier_(params.id);
     case "createExpense":
       return createExpense_(params);
     case "getExpensesByDate":
@@ -239,6 +247,34 @@ function getFrequentGroups_() {
   });
 }
 
+/** Xóa dòng theo cột id (cột A), từ dưới lên để không lệch index */
+function deleteRowById_(sheetName, id) {
+  const sh = getSpreadsheet_().getSheetByName(sheetName);
+  const values = sh.getDataRange().getValues();
+  var deleted = 0;
+  for (var i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][0]) === String(id)) {
+      sh.deleteRow(i + 1);
+      deleted++;
+    }
+  }
+  return deleted;
+}
+
+/** Xóa các dòng có values[i][colIndex] === value */
+function deleteRowsByField_(sheetName, colIndex, value) {
+  const sh = getSpreadsheet_().getSheetByName(sheetName);
+  const values = sh.getDataRange().getValues();
+  var deleted = 0;
+  for (var i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][colIndex]) === String(value)) {
+      sh.deleteRow(i + 1);
+      deleted++;
+    }
+  }
+  return deleted;
+}
+
 function addPerson_(name) {
   if (!name || !String(name).trim()) throw new Error("Nhập tên");
   const id = uid_();
@@ -246,6 +282,39 @@ function addPerson_(name) {
     .getSheetByName(SHEETS.NGUOI)
     .appendRow([id, String(name).trim(), true]);
   return { id: id, name: String(name).trim(), active: true };
+}
+
+function deletePerson_(id) {
+  if (!id) throw new Error("Thiếu id");
+  deleteRowsByField_(SHEETS.BO_THANH_VIEN, 1, id);
+  var n = deleteRowById_(SHEETS.NGUOI, id);
+  if (n === 0) throw new Error("Không tìm thấy người");
+  return { ok: true };
+}
+
+function addPriceTier_(amount, label, isDefault) {
+  var amt = Number(amount);
+  if (!amt || amt <= 0) throw new Error("Số tiền không hợp lệ");
+  if (isDefault) {
+    const sh = getSpreadsheet_().getSheetByName(SHEETS.MUC_GIA);
+    const values = sh.getDataRange().getValues();
+    for (var i = 1; i < values.length; i++) {
+      sh.getRange(i + 1, 4).setValue(false);
+    }
+  }
+  const id = uid_();
+  const lbl = label || Math.round(amt / 1000) + "k";
+  getSpreadsheet_()
+    .getSheetByName(SHEETS.MUC_GIA)
+    .appendRow([id, amt, lbl, !!isDefault]);
+  return { id: id, amount: amt, label: lbl, isDefault: !!isDefault };
+}
+
+function deletePriceTier_(id) {
+  if (!id) throw new Error("Thiếu id");
+  var n = deleteRowById_(SHEETS.MUC_GIA, id);
+  if (n === 0) throw new Error("Không tìm thấy mức giá");
+  return { ok: true };
 }
 
 function addFrequentGroup_(label, personIds) {
@@ -258,6 +327,14 @@ function addFrequentGroup_(label, personIds) {
   return getFrequentGroups_().find(function (g) {
     return g.id === id;
   });
+}
+
+function deleteFrequentGroup_(id) {
+  if (!id) throw new Error("Thiếu id");
+  deleteRowsByField_(SHEETS.BO_THANH_VIEN, 0, id);
+  var n = deleteRowById_(SHEETS.BO_HAY_DI, id);
+  if (n === 0) throw new Error("Không tìm thấy bộ");
+  return { ok: true };
 }
 
 function createExpense_(params) {
