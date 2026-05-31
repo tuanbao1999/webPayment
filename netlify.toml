@@ -8,8 +8,10 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # DATABASE_URL + TURSO_AUTH_TOKEN: đặt trong Netlify UI (Turso), không dùng file SQLite
   NPM_FLAGS = "--include=dev"
+  # BẮT BUỘC: thêm DATABASE_URL trong Netlify UI (không ghi password vào file này)
+  # Project configuration → Environment variables → postgresql://...?sslmode=require
+  # Scopes: Build + Runtime (All deploy contexts)
 
 [functions]
   directory = "netlify/functions"
