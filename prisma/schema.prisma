@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -42,15 +42,15 @@ model PriceTier {
 }
 
 model Expense {
-  id          String   @id @default(cuid())
-  expenseDate DateTime
-  description String
-  totalAmount Int
-  splitMode   String
+  id                 String   @id @default(cuid())
+  expenseDate        DateTime
+  description        String
+  totalAmount        Int
+  splitMode          String
   frequentGroupLabel String?
   submissionId       String?  @unique
-  splits      ExpenseSplit[]
-  createdAt   DateTime @default(now())
+  splits             ExpenseSplit[]
+  createdAt          DateTime @default(now())
 }
 
 model ExpenseSplit {

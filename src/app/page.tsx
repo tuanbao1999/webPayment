@@ -4,16 +4,16 @@ import { formatDateVi, formatVnd, toDateInputValue } from "@/lib/format";
 import { ensureSeed } from "@/lib/ensure-seed";
 import { ExpenseCard } from "@/components/ExpenseCard";
 import { DbSetupGuide } from "@/components/DbSetupGuide";
-import { isCloudDatabase, usesLocalSqliteFile } from "@/lib/db-config";
+import { isCloudDatabase } from "@/lib/db-config";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const onNetlify = !!process.env.NETLIFY;
 
-  if ((onNetlify || process.env.NODE_ENV === "production") && usesLocalSqliteFile() && !isCloudDatabase()) {
+  if ((onNetlify || process.env.NODE_ENV === "production") && !isCloudDatabase()) {
     return (
-      <DbSetupGuide detail="DATABASE_URL đang là file SQLite — Netlify không đọc được file này lúc chạy." />
+      <DbSetupGuide detail="Chưa có DATABASE_URL PostgreSQL (Netlify DB). Không dùng file SQLite trên Netlify." />
     );
   }
 

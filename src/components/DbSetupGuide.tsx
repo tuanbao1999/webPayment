@@ -1,10 +1,9 @@
 export function DbSetupGuide({ detail }: { detail?: string }) {
   return (
     <div className="card space-y-4" style={{ borderColor: "var(--warning)" }}>
-      <h2 className="text-lg font-semibold">Cần cấu hình database trên Netlify</h2>
+      <h2 className="text-lg font-semibold">Cần cấu hình DATABASE_URL</h2>
       <p className="text-sm" style={{ color: "var(--muted)" }}>
-        SQLite file chỉ chạy trên máy local. Site production cần{" "}
-        <strong>Turso</strong> (miễn phí).
+        Production dùng <strong>Netlify DB</strong> (PostgreSQL). Thêm biến môi trường trên Netlify.
       </p>
       {detail && (
         <pre
@@ -16,39 +15,27 @@ export function DbSetupGuide({ detail }: { detail?: string }) {
       )}
       <ol className="list-decimal space-y-2 pl-5 text-sm">
         <li>
-          Đăng ký{" "}
-          <a href="https://turso.tech" target="_blank" rel="noreferrer">
-            turso.tech
-          </a>{" "}
-          → tạo database
+          Netlify → <strong>Extensions</strong> → <strong>Neon</strong> / <strong>Netlify DB</strong> → lấy
+          connection string <code>postgresql://...</code>
         </li>
         <li>
-          Copy <strong>Database URL</strong> (<code>libsql://...</code>) và{" "}
-          <strong>Auth Token</strong>
-        </li>
-        <li>
-          Netlify → <strong>Project configuration</strong> →{" "}
-          <strong>Environment variables</strong> → thêm:
+          <strong>Project configuration</strong> → <strong>Environment variables</strong>:
           <ul className="mt-1 list-disc pl-5">
             <li>
-              <code>DATABASE_URL</code> = libsql://...
-            </li>
-            <li>
-              <code>TURSO_AUTH_TOKEN</code> = token
+              <code>DATABASE_URL</code> = chuỗi PostgreSQL (có <code>?sslmode=require</code>)
             </li>
           </ul>
         </li>
         <li>
           Trên máy (một lần), tạo bảng:
           <pre className="mt-1 overflow-x-auto rounded p-2 text-xs" style={{ background: "var(--bg)" }}>
-            {`set DATABASE_URL=libsql://...
-set TURSO_AUTH_TOKEN=...
+            {`$env:DATABASE_URL="postgresql://..."
 npx prisma db push
 npm run db:seed`}
           </pre>
         </li>
         <li>
-          Netlify → <strong>Deploys</strong> → <strong>Trigger deploy</strong>
+          <strong>Deploys</strong> → <strong>Clear cache and deploy</strong>
         </li>
       </ol>
     </div>
