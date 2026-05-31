@@ -78,45 +78,9 @@ function readSheet_(name) {
   });
 }
 
-function seedIfEmpty_() {
-  ensureSheets_();
-  const people = readSheet_(SHEETS.NGUOI);
-  if (people.length > 0) return;
-
-  const ss = getSpreadsheet_();
-  const names = ["Lan", "An", "Bình", "Chi", "Dung", "Em", "Phúc", "Vy", "Hào"];
-  const ids = names.map(function (n) {
-    const id = uid_();
-    ss.getSheetByName(SHEETS.NGUOI).appendRow([id, n, true]);
-    return id;
-  });
-
-  const tiers = [
-    [40000, "40k", false],
-    [45000, "45k", false],
-    [50000, "50k", true],
-    [55000, "55k", false],
-  ];
-  tiers.forEach(function (t) {
-    ss.getSheetByName(SHEETS.MUC_GIA).appendRow([uid_(), t[0], t[1], t[2]]);
-  });
-
-  const g1 = uid_();
-  ss.getSheetByName(SHEETS.BO_HAY_DI).appendRow([g1, "5 đồng nghiệp hay đi cơm"]);
-  ids.slice(0, 5).forEach(function (pid) {
-    ss.getSheetByName(SHEETS.BO_THANH_VIEN).appendRow([g1, pid]);
-  });
-
-  const g2 = uid_();
-  ss.getSheetByName(SHEETS.BO_HAY_DI).appendRow([g2, "Nhóm tối cuối tuần"]);
-  [ids[1], ids[5], ids[6], ids[7], ids[8]].forEach(function (pid) {
-    ss.getSheetByName(SHEETS.BO_THANH_VIEN).appendRow([g2, pid]);
-  });
-}
-
 function doGet(e) {
   try {
-    seedIfEmpty_();
+    ensureSheets_();
     const action = (e.parameter.action || "ping").toString();
     const data = handleAction_(action, e.parameter);
     return jsonResponse_(data);
@@ -127,7 +91,7 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    seedIfEmpty_();
+    ensureSheets_();
     let body = {};
     if (e.postData && e.postData.contents) {
       body = JSON.parse(e.postData.contents);

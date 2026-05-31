@@ -43,15 +43,18 @@ Deploy lại site.
 
 Hoặc form POST trực tiếp tới URL đó (Apps Script `doPost` nhận field Netlify Forms).
 
-## Cấu trúc Sheet (tự tạo lần đầu)
+## Cấu trúc Sheet
 
-| Sheet | Nội dung |
-|-------|----------|
-| Nguoi | Danh bạ |
-| BoHayDi / BoThanhVien | Bộ hay đi |
-| MucGia | 40k, 45k, 50k… |
-| ChiTieu | Mỗi bill |
-| ChiTiet | Ai nợ bao nhiêu, cột **daCK** |
+Lần đầu gọi API, script chỉ **tạo tab + dòng tiêu đề** (không thêm dữ liệu mẫu). Bạn tự nhập người / mức giá / bộ hay đi qua app hoặc trực tiếp trên Sheet.
+
+| Sheet | Cột (hàng 1) |
+|-------|----------------|
+| Nguoi | id, ten, active |
+| BoHayDi | id, label |
+| BoThanhVien | groupId, personId |
+| MucGia | id, amount, label, isDefault |
+| ChiTieu | id, ngay, moTa, tong, cheDoChia, boHayDi, submissionId, createdAt |
+| ChiTiet | id, chiTieuId, personId, ten, soTien, daCK, paidAt |
 
 ## Cập nhật script
 
