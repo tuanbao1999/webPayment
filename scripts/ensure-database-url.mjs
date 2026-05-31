@@ -1,29 +1,38 @@
 /**
- * Netlify build/runtime cần DATABASE_URL (PostgreSQL).
- * Extension Netlify DB có thể inject NETLIFY_DATABASE_URL — copy sang DATABASE_URL nếu cần.
+ * Build: dùng placeholder nếu chưa có DATABASE_URL (để prisma generate chạy được).
+ * Production: bắt buộc DATABASE_URL thật trên Netlify UI (ghi đè placeholder).
  */
+const PLACEHOLDER =
+  "postgresql://build:build@127.0.0.1:5432/build?sslmode=disable";
+
 const url =
   process.env.DATABASE_URL ||
   process.env.NETLIFY_DATABASE_URL ||
-  process.env.NETLIFY_DATABASE_URL_UNPOOLED;
+  process.env.NETLIFY_DATABASE_URL_UNPOOLED ||
+  process.env.NETLIFY_DATABASE_URL_POOLED;
 
-if (!url) {
-  console.error(`
-❌ Thiếu DATABASE_URL khi build/deploy
+if (url) {
+  process.env.DATABASE_URL = url;
+  console.log("✓ DATABASE_URL đã có (build + runtime)");
+} else {
+  process.env.DATABASE_URL = PLACEHOLDER;
+  console.warn(`
+⚠️  Chưa có DATABASE_URL trên Netlify — build dùng placeholder tạm.
 
-Trên Netlify:
-  1. Project configuration → Environment variables
-  2. Add variable: DATABASE_URL
-  3. Value: postgresql://...?sslmode=require  (từ Netlify DB / Neon)
-  4. Scopes: chọn cả Build và Runtime (hoặc "All")
-  5. Deploy lại (Clear cache and deploy)
+   Để app chạy thật, thêm trên Netlify:
+   Project configuration → Environment variables
+   → DATABASE_URL = postgresql://...?sslmode=require
+   → Scopes: All (Build + Runtime)
 
-Xem README.md phần Deploy Netlify.
+   Sau đó deploy lại.
 `);
-  process.exit(1);
 }
 
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = url;
-  console.log("ℹ️  Dùng biến DB từ NETLIFY_DATABASE_URL → DATABASE_URL");
+export function isRealDatabaseUrl(u) {
+  return (
+    u &&
+    !u.includes("127.0.0.1") &&
+    !u.includes("@build:build") &&
+    (u.startsWith("postgresql://") || u.startsWith("postgres://"))
+  );
 }

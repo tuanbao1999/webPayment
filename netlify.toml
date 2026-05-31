@@ -9,9 +9,8 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--include=dev"
-  # BẮT BUỘC: thêm DATABASE_URL trong Netlify UI (không ghi password vào file này)
-  # Project configuration → Environment variables → postgresql://...?sslmode=require
-  # Scopes: Build + Runtime (All deploy contexts)
+  # Placeholder để build qua khi chưa khai báo UI — GHI ĐÈ bằng DATABASE_URL thật trên Netlify UI
+  DATABASE_URL = "postgresql://build:build@127.0.0.1:5432/build?sslmode=disable"
 
 [functions]
   directory = "netlify/functions"

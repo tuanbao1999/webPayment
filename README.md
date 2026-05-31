@@ -20,10 +20,10 @@ Mở http://localhost:3000
    Nếu đang là `/` hoặc `.` → lỗi: *publish directory cannot be the same as the base directory*.  
    File `netlify.toml` đã đặt `publish = ".next"` — trên UI **không** ghi đè thành thư mục gốc.
 3. Build: `npm run build` (có `prisma db push` trong script)
-4. **Environment variables** (bắt buộc — nếu thiếu sẽ lỗi P1012):
+4. **Environment variables** (để app chạy thật, không chỉ build):
    - `DATABASE_URL` = `postgresql://...?sslmode=require` (copy từ Netlify DB)
-   - **Scopes:** bật **Build** và **Runtime** (hoặc "Same value for all deploy contexts")
-   - Không chỉ gán cho Functions — build cần biến này để `prisma db push`
+   - **Scopes:** **All** (Build + Runtime)
+   - Build có thể xong nhờ placeholder; **không có biến này → site mở vẫn lỗi DB**
 4. Forms: file `public/forms.html` được detect lúc deploy
 5. Form notifications → Email (tùy chọn) + Webhook → `/.netlify/functions/form-submission`
 6. (Tùy chọn) `NEXT_PUBLIC_NETLIFY_FORM=true` để gửi kèm Netlify Forms khi lưu bill
