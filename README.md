@@ -20,13 +20,15 @@ Mở http://localhost:3000
    Nếu đang là `/` hoặc `.` → lỗi: *publish directory cannot be the same as the base directory*.  
    File `netlify.toml` đã đặt `publish = ".next"` — trên UI **không** ghi đè thành thư mục gốc.
 3. Build: `npm run build` (có `prisma db push` trong script)
-4. **Environment variables** (để app chạy thật, không chỉ build):
-   - `DATABASE_URL` = `postgresql://...?sslmode=require` (copy từ Netlify DB)
-   - **Scopes:** **All** (Build + Runtime)
-   - Build có thể xong nhờ placeholder; **không có biến này → site mở vẫn lỗi DB**
-4. Forms: file `public/forms.html` được detect lúc deploy
-5. Form notifications → Email (tùy chọn) + Webhook → `/.netlify/functions/form-submission`
-6. (Tùy chọn) `NEXT_PUBLIC_NETLIFY_FORM=true` để gửi kèm Netlify Forms khi lưu bill
+4. **Environment variables** (để app chạy thật):
+   - **Key:** `DATABASE_URL`
+   - **Value:** `postgresql://...?sslmode=require` (copy từ Netlify DB)
+   - **Contains secret values:** bật **ON** (Netlify khuyến nghị — ẩn giá trị trên UI, API, build log, CLI)
+   - **Scopes:** **All deploy contexts** (Build + Runtime)
+   - Không commit URL/mật khẩu vào Git — chỉ đặt trên Netlify hoặc file `.env` local
+5. Forms: file `public/forms.html` được detect lúc deploy
+6. Form notifications → Email (tùy chọn) + Webhook → `/.netlify/functions/form-submission`
+7. (Tùy chọn) `NEXT_PUBLIC_NETLIFY_FORM=true` để gửi kèm Netlify Forms khi lưu bill
 
 ## Tính năng
 
