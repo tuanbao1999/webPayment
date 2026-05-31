@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id        String   @id @default(cuid())
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  splits    ExpenseSplit[]
+  groupMembers FrequentGroupMember[]
+}
+
+model FrequentGroup {
+  id        String   @id @default(cuid())
+  label     String
+  sortOrder Int      @default(0)
+  members   FrequentGroupMember[]
+}
+
+model FrequentGroupMember {
+  id              String @id @default(cuid())
+  frequentGroupId String
+  personId        String
+  frequentGroup   FrequentGroup @relation(fields: [frequentGroupId], references: [id], onDelete: Cascade)
+  person          Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([frequentGroupId, personId])
+}
+
+model PriceTier {
+  id        String  @id @default(cuid())
+  amount    Int
+  label     String
+  sortOrder Int     @default(0)
+  isDefault Boolean @default(false)
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  expenseDate DateTime
+  description String
+  totalAmount Int
+  splitMode   String
+  frequentGroupLabel String?
+  submissionId       String?  @unique
+  splits      ExpenseSplit[]
+  createdAt   DateTime @default(now())
+}
+
+model ExpenseSplit {
+  id        String  @id @default(cuid())
+  expenseId String
+  personId  String
+  amount    Int
+  isManual  Boolean @default(false)
+  expense   Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  person    Person      @relation(fields: [personId], references: [id])
+  settlement Settlement?
+}
+
+model Settlement {
+  id             String    @id @default(cuid())
+  expenseSplitId String    @unique
+  paidAt         DateTime?
+  expenseSplit   ExpenseSplit @relation(fields: [expenseSplitId], references: [id], onDelete: Cascade)
+}

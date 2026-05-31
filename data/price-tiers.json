@@ -1,0 +1,8 @@
+{
+  "tiers": [
+    { "id": "40", "amount": 40000, "label": "40k", "isDefault": false },
+    { "id": "45", "amount": 45000, "label": "45k", "isDefault": false },
+    { "id": "50", "amount": 50000, "label": "50k", "isDefault": true },
+    { "id": "55", "amount": 55000, "label": "55k", "isDefault": false }
+  ]
+}

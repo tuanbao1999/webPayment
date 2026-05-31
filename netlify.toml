@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  DATABASE_URL = "file:./prisma/dev.db"
+
+[functions]
+  directory = "netlify/functions"

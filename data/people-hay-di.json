@@ -1,0 +1,25 @@
+{
+  "people": [
+    { "id": "lan", "name": "Lan" },
+    { "id": "an", "name": "An" },
+    { "id": "binh", "name": "Bình" },
+    { "id": "chi", "name": "Chi" },
+    { "id": "dung", "name": "Dung" },
+    { "id": "em", "name": "Em" },
+    { "id": "phuc", "name": "Phúc" },
+    { "id": "vy", "name": "Vy" },
+    { "id": "hao", "name": "Hào" }
+  ],
+  "frequentGroups": [
+    {
+      "id": "bo-5-cong-ty",
+      "label": "5 đồng nghiệp hay đi cơm",
+      "personIds": ["lan", "an", "binh", "chi", "dung"]
+    },
+    {
+      "id": "bo-toi-cuoi-tuan",
+      "label": "Nhóm tối cuối tuần",
+      "personIds": ["an", "em", "phuc", "vy", "hao"]
+    }
+  ]
+}
