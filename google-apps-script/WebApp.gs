@@ -155,6 +155,18 @@ function handleAction_(action, params) {
       return togglePaid_(params.splitId, params.paid);
     case "getBalances":
       return getBalances_();
+    case "getDebtsSummary":
+      return getDebtsSummary_();
+    case "getPersonHistory":
+      return getPersonHistory_(params.personId);
+    case "filterExpenses":
+      return filterExpenses_(params);
+    case "getMonthlyStats":
+      return getMonthlyStats_(params.month);
+    case "updateExpense":
+      return updateExpense_(params);
+    case "deleteExpense":
+      return deleteExpense_(params.id);
     default:
       throw new Error("Unknown action: " + action);
   }
@@ -376,7 +388,7 @@ function buildExpenseFromRows_(expenseRow, details) {
     return {
       id: String(d.id),
       amount: Number(d.soTien),
-      person: { name: String(d.ten) },
+      person: { id: String(d.personId), name: String(d.ten) },
       settlement: {
         paidAt: d.paidAt ? new Date(d.paidAt) : d.daCK === true || d.daCK === "TRUE" ? new Date() : null,
       },
@@ -437,23 +449,325 @@ function togglePaid_(splitId, paid) {
   throw new Error("Không tìm thấy");
 }
 
-function getBalances_() {
+function isPaid_(d) {
+  return d.daCK === true || d.daCK === "TRUE" || !!d.paidAt;
+}
+
+function getAllExpenses_() {
+  const expenses = readSheet_(SHEETS.CHI_TIEU);
   const details = readSheet_(SHEETS.CHI_TIET);
-  const map = {};
-  details.forEach(function (d) {
-    const key = String(d.ten);
-    if (!map[key]) map[key] = { personId: String(d.personId), name: key, owed: 0, paid: 0 };
-    map[key].owed += Number(d.soTien);
-    if (d.daCK === true || d.daCK === "TRUE" || d.paidAt) map[key].paid += Number(d.soTien);
-  });
-  return Object.values(map)
-    .map(function (p) {
-      return { personId: p.personId, name: p.name, owed: p.owed, paid: p.paid, remaining: p.owed - p.paid };
+  return expenses
+    .map(function (e) {
+      const det = details.filter(function (d) {
+        return String(d.chiTieuId) === String(e.id);
+      });
+      return buildExpenseFromRows_(e, det);
     })
+    .sort(function (a, b) {
+      return String(b.expenseDate).localeCompare(String(a.expenseDate));
+    });
+}
+
+function getBalances_() {
+  return getDebtsSummary_().people
     .filter(function (p) {
       return p.remaining > 0;
     })
-    .sort(function (a, b) {
-      return b.remaining - a.remaining;
+    .map(function (p) {
+      return {
+        personId: p.personId,
+        name: p.name,
+        owed: p.totalOwed,
+        paid: p.totalPaid,
+        remaining: p.remaining,
+      };
     });
+}
+
+function getDebtsSummary_() {
+  const expenses = readSheet_(SHEETS.CHI_TIEU);
+  const details = readSheet_(SHEETS.CHI_TIET);
+  const expMap = {};
+  expenses.forEach(function (e) {
+    expMap[String(e.id)] = e;
+  });
+
+  const map = {};
+  details.forEach(function (d) {
+    const pid = String(d.personId);
+    if (!map[pid]) {
+      map[pid] = {
+        personId: pid,
+        name: String(d.ten),
+        totalOwed: 0,
+        totalPaid: 0,
+        remaining: 0,
+        unpaidItems: [],
+      };
+    }
+    const amt = Number(d.soTien);
+    map[pid].totalOwed += amt;
+    if (isPaid_(d)) {
+      map[pid].totalPaid += amt;
+    } else {
+      map[pid].remaining += amt;
+      const exp = expMap[String(d.chiTieuId)];
+      map[pid].unpaidItems.push({
+        splitId: String(d.id),
+        expenseId: String(d.chiTieuId),
+        amount: amt,
+        description: exp ? String(exp.moTa) : "",
+        date: exp ? String(exp.ngay).slice(0, 10) : "",
+      });
+    }
+  });
+
+  const people = Object.values(map).sort(function (a, b) {
+    return b.remaining - a.remaining;
+  });
+  const totalRemaining = people.reduce(function (s, p) {
+    return s + p.remaining;
+  }, 0);
+
+  return { people: people, totalRemaining: totalRemaining };
+}
+
+function getPersonHistory_(personId) {
+  if (!personId) throw new Error("Thiếu personId");
+  const details = readSheet_(SHEETS.CHI_TIET).filter(function (d) {
+    return String(d.personId) === String(personId);
+  });
+  const expenses = readSheet_(SHEETS.CHI_TIEU);
+  const expMap = {};
+  expenses.forEach(function (e) {
+    expMap[String(e.id)] = e;
+  });
+
+  const items = details.map(function (d) {
+    const exp = expMap[String(d.chiTieuId)];
+    return {
+      splitId: String(d.id),
+      amount: Number(d.soTien),
+      paid: isPaid_(d),
+      paidAt: d.paidAt ? String(d.paidAt) : null,
+      expense: exp
+        ? {
+            id: String(exp.id),
+            expenseDate: String(exp.ngay).slice(0, 10),
+            description: String(exp.moTa),
+            totalAmount: Number(exp.tong),
+          }
+        : null,
+    };
+  });
+
+  items.sort(function (a, b) {
+    const da = a.expense ? a.expense.expenseDate : "";
+    const db = b.expense ? b.expense.expenseDate : "";
+    return db.localeCompare(da);
+  });
+
+  const totalOwed = items.reduce(function (s, i) {
+    return s + i.amount;
+  }, 0);
+  const totalPaid = items
+    .filter(function (i) {
+      return i.paid;
+    })
+    .reduce(function (s, i) {
+      return s + i.amount;
+    }, 0);
+
+  const person = getPeople_().find(function (p) {
+    return p.id === String(personId);
+  });
+
+  return {
+    person: person || { id: String(personId), name: details[0] ? String(details[0].ten) : "?" },
+    totalOwed: totalOwed,
+    totalPaid: totalPaid,
+    remaining: totalOwed - totalPaid,
+    items: items,
+  };
+}
+
+function filterExpenses_(params) {
+  var list = getAllExpenses_();
+
+  if (params.dateFrom) {
+    list = list.filter(function (e) {
+      return String(e.expenseDate).slice(0, 10) >= String(params.dateFrom);
+    });
+  }
+  if (params.dateTo) {
+    list = list.filter(function (e) {
+      return String(e.expenseDate).slice(0, 10) <= String(params.dateTo);
+    });
+  }
+  if (params.personId) {
+    list = list
+      .map(function (e) {
+        return {
+          id: e.id,
+          expenseDate: e.expenseDate,
+          description: e.description,
+          totalAmount: e.totalAmount,
+          splitMode: e.splitMode,
+          splits: e.splits.filter(function (s) {
+            return s.person && String(s.person.id) === String(params.personId);
+          }),
+          createdAt: e.createdAt,
+        };
+      })
+      .filter(function (e) {
+        return e.splits.length > 0;
+      });
+  }
+  if (params.status === "unpaid") {
+    list = list.filter(function (e) {
+      return e.splits.some(function (s) {
+        return !s.settlement || !s.settlement.paidAt;
+      });
+    });
+  } else if (params.status === "paid") {
+    list = list.filter(function (e) {
+      return (
+        e.splits.length > 0 &&
+        e.splits.every(function (s) {
+          return s.settlement && s.settlement.paidAt;
+        })
+      );
+    });
+  }
+
+  return list;
+}
+
+function getMonthlyStats_(monthStr) {
+  const month = (monthStr || new Date().toISOString().slice(0, 7)).toString();
+  const expenses = readSheet_(SHEETS.CHI_TIEU).filter(function (e) {
+    return String(e.ngay).slice(0, 7) === month;
+  });
+  const details = readSheet_(SHEETS.CHI_TIET);
+  const expIds = {};
+  expenses.forEach(function (e) {
+    expIds[String(e.id)] = e;
+  });
+
+  const totalSpent = expenses.reduce(function (s, e) {
+    return s + Number(e.tong);
+  }, 0);
+
+  var unpaidTotal = 0;
+  details.forEach(function (d) {
+    if (expIds[String(d.chiTieuId)] && !isPaid_(d)) {
+      unpaidTotal += Number(d.soTien);
+    }
+  });
+
+  const personCount = {};
+  details.forEach(function (d) {
+    if (!expIds[String(d.chiTieuId)]) return;
+    const name = String(d.ten);
+    personCount[name] = (personCount[name] || 0) + 1;
+  });
+  const byPerson = Object.keys(personCount)
+    .map(function (name) {
+      return { name: name, count: personCount[name] };
+    })
+    .sort(function (a, b) {
+      return b.count - a.count;
+    });
+
+  const topExpenses = expenses
+    .map(function (e) {
+      return {
+        id: String(e.id),
+        description: String(e.moTa),
+        date: String(e.ngay).slice(0, 10),
+        amount: Number(e.tong),
+      };
+    })
+    .sort(function (a, b) {
+      return b.amount - a.amount;
+    })
+    .slice(0, 5);
+
+  return {
+    month: month,
+    totalSpent: totalSpent,
+    expenseCount: expenses.length,
+    unpaidTotal: unpaidTotal,
+    byPerson: byPerson,
+    topExpenses: topExpenses,
+  };
+}
+
+function updateExpenseRow_(id, ngay, moTa, tong, cheDoChia, boHayDi) {
+  const sh = getSpreadsheet_().getSheetByName(SHEETS.CHI_TIEU);
+  const values = sh.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === String(id)) {
+      sh.getRange(i + 1, 2, i + 1, 6).setValues([[ngay, moTa, tong, cheDoChia, boHayDi || ""]]);
+      return;
+    }
+  }
+  throw new Error("Không tìm thấy bill");
+}
+
+function deleteExpense_(id) {
+  if (!id) throw new Error("Thiếu id");
+  deleteRowsByField_(SHEETS.CHI_TIET, 1, id);
+  var n = deleteRowById_(SHEETS.CHI_TIEU, id);
+  if (n === 0) throw new Error("Không tìm thấy bill");
+  return { ok: true };
+}
+
+function updateExpense_(params) {
+  const id = params.id;
+  if (!id) throw new Error("Thiếu id");
+
+  const people = getPeople_();
+  const participantIds = params.participantIds || [];
+  const amounts = params.tierAmounts || [];
+  const amountsMap = {};
+  amounts.forEach(function (a) {
+    amountsMap[a.personId] = Number(a.amount);
+  });
+
+  var tong = Number(params.totalAmount) || 0;
+  if (!tong) {
+    participantIds.forEach(function (pid) {
+      tong += amountsMap[pid] || 0;
+    });
+  }
+
+  updateExpenseRow_(
+    id,
+    params.expenseDate || new Date().toISOString().slice(0, 10),
+    params.description || "Chi tiêu",
+    tong,
+    params.splitMode || "tier",
+    params.frequentGroupLabel || ""
+  );
+
+  deleteRowsByField_(SHEETS.CHI_TIET, 1, id);
+  const ss = getSpreadsheet_();
+  participantIds.forEach(function (pid) {
+    const person = people.find(function (p) {
+      return p.id === pid;
+    });
+    const splitId = uid_();
+    ss.getSheetByName(SHEETS.CHI_TIET).appendRow([
+      splitId,
+      id,
+      pid,
+      person ? person.name : pid,
+      amountsMap[pid] || 0,
+      false,
+      "",
+    ]);
+  });
+
+  return getExpense_(id);
 }

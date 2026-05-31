@@ -15,7 +15,7 @@ export type ExpenseWithSplits = {
   splits: {
     id: string;
     amount: number;
-    person: { name: string };
+    person: { id?: string; name: string };
     settlement: { paidAt: Date | string | null } | null;
   }[];
   createdAt?: string;
@@ -103,4 +103,132 @@ export async function getPersonBalances() {
   return sheetsRequest<
     { personId: string; name: string; owed: number; paid: number; remaining: number }[]
   >("getBalances", {}, "GET");
+}
+
+export type DebtPerson = {
+  personId: string;
+  name: string;
+  totalOwed: number;
+  totalPaid: number;
+  remaining: number;
+  unpaidItems: {
+    splitId: string;
+    expenseId: string;
+    amount: number;
+    description: string;
+    date: string;
+  }[];
+};
+
+export async function getDebtsSummary() {
+  return sheetsRequest<{ people: DebtPerson[]; totalRemaining: number }>(
+    "getDebtsSummary",
+    {},
+    "GET"
+  );
+}
+
+export type PersonHistory = {
+  person: { id: string; name: string };
+  totalOwed: number;
+  totalPaid: number;
+  remaining: number;
+  items: {
+    splitId: string;
+    amount: number;
+    paid: boolean;
+    paidAt: string | null;
+    expense: {
+      id: string;
+      expenseDate: string;
+      description: string;
+      totalAmount: number;
+    } | null;
+  }[];
+};
+
+export async function getPersonHistory(personId: string) {
+  return sheetsRequest<PersonHistory>("getPersonHistory", { personId }, "GET");
+}
+
+export type ExpenseFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  personId?: string;
+  status?: "all" | "paid" | "unpaid";
+};
+
+export async function filterExpenses(filters: ExpenseFilters) {
+  const params: Record<string, string> = {};
+  if (filters.dateFrom) params.dateFrom = filters.dateFrom;
+  if (filters.dateTo) params.dateTo = filters.dateTo;
+  if (filters.personId) params.personId = filters.personId;
+  if (filters.status && filters.status !== "all") params.status = filters.status;
+  return sheetsRequest<ExpenseWithSplits[]>("filterExpenses", params, "GET");
+}
+
+export type MonthlyStats = {
+  month: string;
+  totalSpent: number;
+  expenseCount: number;
+  unpaidTotal: number;
+  byPerson: { name: string; count: number }[];
+  topExpenses: { id: string; description: string; date: string; amount: number }[];
+};
+
+export async function getMonthlyStats(month: string) {
+  return sheetsRequest<MonthlyStats>("getMonthlyStats", { month }, "GET");
+}
+
+export async function updateExpense(id: string, payload: CreateExpensePayload) {
+  const { participantIds } = payload;
+  if (participantIds.length === 0) throw new Error("Chọn ít nhất một người");
+
+  let totalAmount = payload.totalAmount ?? 0;
+  let amounts: Map<string, number>;
+  let splitMode = payload.splitMode;
+
+  if (splitMode === "tier" && payload.tierAmounts) {
+    const built = splitFromTiers(payload.tierAmounts);
+    totalAmount = built.total;
+    amounts = built.amounts;
+  } else if (splitMode === "equal" || splitMode === "from_total") {
+    if (!payload.totalAmount || payload.totalAmount <= 0) throw new Error("Nhập tổng tiền hợp lệ");
+    const built = buildEqualFromTotal(payload.totalAmount, participantIds);
+    totalAmount = built.total;
+    amounts = built.amounts;
+    splitMode = "equal";
+  } else if (splitMode === "custom") {
+    if (!payload.totalAmount || payload.totalAmount <= 0) throw new Error("Nhập tổng tiền hợp lệ");
+    const built = buildCustomFromTotal(
+      payload.totalAmount,
+      payload.customAmounts ?? [],
+      participantIds
+    );
+    if (built.error) throw new Error(built.error);
+    totalAmount = built.total;
+    amounts = built.amounts;
+  } else {
+    throw new Error("Chế độ chia không hợp lệ");
+  }
+
+  const tierAmounts = participantIds.map((personId) => ({
+    personId,
+    amount: amounts.get(personId)!,
+  }));
+
+  return sheetsRequest<ExpenseWithSplits>("updateExpense", {
+    id,
+    expenseDate: payload.expenseDate,
+    description: payload.description || "Chi tiêu",
+    splitMode,
+    totalAmount,
+    participantIds,
+    tierAmounts,
+    frequentGroupLabel: payload.frequentGroupLabel,
+  });
+}
+
+export async function deleteExpense(id: string) {
+  return sheetsRequest<{ ok: boolean }>("deleteExpense", { id });
 }

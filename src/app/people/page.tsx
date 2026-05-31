@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DeleteButton } from "@/components/DeleteButton";
 
@@ -73,7 +74,9 @@ export default function PeoplePage() {
       <ul className="card space-y-2">
         {people.map((p) => (
           <li key={p.id} className="flex items-center justify-between gap-2">
-            <span>{p.name}</span>
+            <Link href={`/people/${p.id}`} className="font-medium">
+              {p.name}
+            </Link>
             <DeleteButton label={p.name} onDelete={() => remove(p.id)} />
           </li>
         ))}

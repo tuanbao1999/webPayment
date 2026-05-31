@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
-import { getExpenseById } from "@/lib/expense-service";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  deleteExpense,
+  getExpenseById,
+  updateExpense,
+  type CreateExpensePayload,
+} from "@/lib/expense-service";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +25,35 @@ export async function GET(
   }
 }
 
-export async function DELETE() {
-  return NextResponse.json(
-    { error: "Xóa bill: xóa dòng trên sheet ChiTieu / ChiTiet trong Google Sheets" },
-    { status: 501 }
-  );
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = (await request.json()) as CreateExpensePayload;
+    const expense = await updateExpense(id, body);
+    return NextResponse.json(expense);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Lỗi" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    await deleteExpense(id);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Lỗi" },
+      { status: 500 }
+    );
+  }
 }

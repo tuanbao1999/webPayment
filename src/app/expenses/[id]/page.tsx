@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ExpenseActions } from "@/components/ExpenseActions";
 import { SettlementToggle } from "@/components/SettlementToggle";
 import { getExpenseById } from "@/lib/expense-service";
 import { formatDateVi, formatVnd } from "@/lib/format";
@@ -32,6 +33,13 @@ export default async function ExpenseDetailPage({
           {paidCount}/{expense.splits.length} đã chuyển khoản
         </p>
       </div>
+
+      <ExpenseActions
+        expenseId={expense.id}
+        expenseDate={String(expense.expenseDate)}
+        description={expense.description}
+        splits={expense.splits}
+      />
 
       <div className="card">
         <h3 className="mb-2 font-semibold">Tick đã nhận tiền</h3>

@@ -66,14 +66,19 @@ export default async function HomePage() {
 
         {balances.length > 0 && (
           <section className="card">
-            <h2 className="mb-3 text-lg font-semibold">Ai còn nợ (tất cả)</h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Ai còn nợ</h2>
+              <Link href="/debts" className="text-sm">
+                Chi tiết →
+              </Link>
+            </div>
             <ul className="space-y-2">
               {balances.map((b) => (
                 <li
                   key={b.personId}
                   className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
                 >
-                  <span>{b.name}</span>
+                  <Link href={`/people/${b.personId}`}>{b.name}</Link>
                   <span className="font-semibold" style={{ color: "var(--warning)" }}>
                     {formatVnd(b.remaining)}
                   </span>
