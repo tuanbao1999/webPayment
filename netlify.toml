@@ -1,4 +1,5 @@
 [build]
+  # Tạo thư mục DB, migrate, rồi build Next
   command = "npm run build"
 
 [[plugins]]

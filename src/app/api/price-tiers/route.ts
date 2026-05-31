@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { ensureSeed } from "@/lib/ensure-seed";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
+  await ensureSeed();
   const tiers = await prisma.priceTier.findMany({
     orderBy: { sortOrder: "asc" },
   });
