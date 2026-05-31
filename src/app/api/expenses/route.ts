@@ -1,14 +1,24 @@
 import { NextResponse } from "next/server";
-import { createExpense, getExpensesForDate } from "@/lib/expense-service";
+import { createExpense } from "@/lib/expense-service";
 import { parseDateInput } from "@/lib/format";
 import type { SplitMode } from "@/lib/split";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const dateStr = searchParams.get("date");
-  const date = dateStr ? parseDateInput(dateStr) : new Date();
-  const expenses = await getExpensesForDate(date);
-  return NextResponse.json(expenses);
+  try {
+    const { searchParams } = new URL(request.url);
+    const dateStr = searchParams.get("date");
+    const date = dateStr ? parseDateInput(dateStr) : new Date();
+    const { getExpensesForDate } = await import("@/lib/expense-service");
+    const expenses = await getExpensesForDate(date);
+    return NextResponse.json(expenses);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Lỗi" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -27,7 +37,9 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(expense);
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Lỗi lưu";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Lỗi" },
+      { status: 400 }
+    );
   }
 }

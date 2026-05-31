@@ -1,11 +1,25 @@
-import { prisma } from "@/lib/db";
 import {
   buildCustomFromTotal,
   buildEqualFromTotal,
   splitFromTiers,
   type SplitMode,
 } from "@/lib/split";
-import { endOfDay, parseDateInput, startOfDay } from "@/lib/format";
+import { sheetsRequest } from "@/lib/sheets-api";
+
+export type ExpenseWithSplits = {
+  id: string;
+  expenseDate: string | Date;
+  description: string;
+  totalAmount: number;
+  splitMode: string;
+  splits: {
+    id: string;
+    amount: number;
+    person: { name: string };
+    settlement: { paidAt: Date | string | null } | null;
+  }[];
+  createdAt?: string;
+};
 
 export type CreateExpensePayload = {
   expenseDate: string;
@@ -21,9 +35,7 @@ export type CreateExpensePayload = {
 
 export async function createExpense(payload: CreateExpensePayload) {
   const { participantIds } = payload;
-  if (participantIds.length === 0) {
-    throw new Error("Chọn ít nhất một người");
-  }
+  if (participantIds.length === 0) throw new Error("Chọn ít nhất một người");
 
   let totalAmount = payload.totalAmount ?? 0;
   let amounts: Map<string, number>;
@@ -34,17 +46,13 @@ export async function createExpense(payload: CreateExpensePayload) {
     totalAmount = built.total;
     amounts = built.amounts;
   } else if (splitMode === "equal" || splitMode === "from_total") {
-    if (!payload.totalAmount || payload.totalAmount <= 0) {
-      throw new Error("Nhập tổng tiền hợp lệ");
-    }
+    if (!payload.totalAmount || payload.totalAmount <= 0) throw new Error("Nhập tổng tiền hợp lệ");
     const built = buildEqualFromTotal(payload.totalAmount, participantIds);
     totalAmount = built.total;
     amounts = built.amounts;
     splitMode = "equal";
   } else if (splitMode === "custom") {
-    if (!payload.totalAmount || payload.totalAmount <= 0) {
-      throw new Error("Nhập tổng tiền hợp lệ");
-    }
+    if (!payload.totalAmount || payload.totalAmount <= 0) throw new Error("Nhập tổng tiền hợp lệ");
     const built = buildCustomFromTotal(
       payload.totalAmount,
       payload.customAmounts ?? [],
@@ -57,101 +65,42 @@ export async function createExpense(payload: CreateExpensePayload) {
     throw new Error("Chế độ chia không hợp lệ");
   }
 
-  for (const id of participantIds) {
-    const amt = amounts.get(id);
-    if (!amt || amt <= 0) throw new Error("Mỗi người phải có số tiền > 0");
-  }
+  const tierAmounts = participantIds.map((personId) => ({
+    personId,
+    amount: amounts.get(personId)!,
+  }));
 
-  if (payload.submissionId) {
-    const existing = await prisma.expense.findUnique({
-      where: { submissionId: payload.submissionId },
-    });
-    if (existing) return existing;
-  }
-
-  const expense = await prisma.expense.create({
-    data: {
-      expenseDate: parseDateInput(payload.expenseDate),
-      description: payload.description || "Chi tiêu",
-      totalAmount,
-      splitMode,
-      frequentGroupLabel: payload.frequentGroupLabel,
-      submissionId: payload.submissionId,
-      splits: {
-        create: participantIds.map((personId) => ({
-          personId,
-          amount: amounts.get(personId)!,
-          isManual: splitMode === "custom" || splitMode === "tier",
-          settlement: { create: {} },
-        })),
-      },
-    },
-    include: {
-      splits: { include: { person: true, settlement: true } },
-    },
+  return sheetsRequest<ExpenseWithSplits>("createExpense", {
+    expenseDate: payload.expenseDate,
+    description: payload.description || "Chi tiêu",
+    splitMode,
+    totalAmount,
+    participantIds,
+    tierAmounts,
+    frequentGroupLabel: payload.frequentGroupLabel,
+    submissionId: payload.submissionId,
   });
-
-  return expense;
 }
 
 export async function getExpensesForDate(date: Date) {
-  return prisma.expense.findMany({
-    where: {
-      expenseDate: { gte: startOfDay(date), lte: endOfDay(date) },
-    },
-    include: {
-      splits: { include: { person: true, settlement: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const dateStr = date.toISOString().slice(0, 10);
+  return sheetsRequest<ExpenseWithSplits[]>(
+    "getExpensesByDate",
+    { date: dateStr },
+    "GET"
+  );
 }
 
 export async function getExpenseById(id: string) {
-  return prisma.expense.findUnique({
-    where: { id },
-    include: {
-      splits: { include: { person: true, settlement: true } },
-    },
-  });
+  return sheetsRequest<ExpenseWithSplits | null>("getExpense", { id }, "GET");
 }
 
 export async function toggleSettlement(splitId: string, paid: boolean) {
-  const split = await prisma.expenseSplit.findUnique({
-    where: { id: splitId },
-    include: { settlement: true },
-  });
-  if (!split?.settlement) throw new Error("Không tìm thấy");
-
-  return prisma.settlement.update({
-    where: { id: split.settlement.id },
-    data: { paidAt: paid ? new Date() : null },
-  });
+  return sheetsRequest("togglePaid", { splitId, paid });
 }
 
 export async function getPersonBalances() {
-  const splits = await prisma.expenseSplit.findMany({
-    include: { person: true, settlement: true },
-  });
-
-  const map = new Map<
-    string,
-    { personId: string; name: string; owed: number; paid: number }
-  >();
-
-  for (const s of splits) {
-    const cur = map.get(s.personId) ?? {
-      personId: s.personId,
-      name: s.person.name,
-      owed: 0,
-      paid: 0,
-    };
-    cur.owed += s.amount;
-    if (s.settlement?.paidAt) cur.paid += s.amount;
-    map.set(s.personId, cur);
-  }
-
-  return [...map.values()]
-    .map((p) => ({ ...p, remaining: p.owed - p.paid }))
-    .filter((p) => p.remaining > 0)
-    .sort((a, b) => b.remaining - a.remaining);
+  return sheetsRequest<
+    { personId: string; name: string; owed: number; paid: number; remaining: number }[]
+  >("getBalances", {}, "GET");
 }

@@ -7,16 +7,11 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/ensure-database-url.mjs && prisma generate && node scripts/maybe-db-push.mjs && next build",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@prisma/client": "^6.9.0",
-    "prisma": "^6.9.0",
     "next": "^15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
@@ -33,7 +28,6 @@
     "tailwindcss": "^4.1.8",
     "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4.1.8",
-    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
 }

@@ -1,24 +1,17 @@
 import Link from "next/link";
 import { getExpensesForDate, getPersonBalances } from "@/lib/expense-service";
 import { formatDateVi, formatVnd, toDateInputValue } from "@/lib/format";
-import { ensureSeed } from "@/lib/ensure-seed";
 import { ExpenseCard } from "@/components/ExpenseCard";
-import { DbSetupGuide } from "@/components/DbSetupGuide";
-import { isCloudDatabase } from "@/lib/db-config";
+import { SheetsSetupGuide } from "@/components/SheetsSetupGuide";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const onNetlify = !!process.env.NETLIFY;
-
-  if ((onNetlify || process.env.NODE_ENV === "production") && !isCloudDatabase()) {
-    return (
-      <DbSetupGuide detail="Chưa có DATABASE_URL PostgreSQL (Netlify DB). Không dùng file SQLite trên Netlify." />
-    );
+  if (!process.env.GOOGLE_SCRIPT_URL) {
+    return <SheetsSetupGuide detail="Thiếu GOOGLE_SCRIPT_URL trên server." />;
   }
 
   try {
-    await ensureSeed();
     const today = new Date();
     const expenses = await getExpensesForDate(today);
     const balances = await getPersonBalances();
@@ -32,9 +25,17 @@ export default async function HomePage() {
     }, 0);
 
     const dateStr = toDateInputValue(today);
+    const sheetUrl = process.env.NEXT_PUBLIC_GOOGLE_SHEET_URL;
 
     return (
       <div className="space-y-6">
+        {sheetUrl && (
+          <p className="text-sm">
+            <a href={sheetUrl} target="_blank" rel="noreferrer">
+              Mở Google Sheet →
+            </a>
+          </p>
+        )}
         <section className="card">
           <h2 className="mb-3 text-lg font-semibold">Hôm nay — {formatDateVi(today)}</h2>
           <div className="grid grid-cols-2 gap-4 text-center">
@@ -83,9 +84,7 @@ export default async function HomePage() {
         )}
 
         <section>
-          <h2 className="mb-3 text-lg font-semibold">
-            Bill hôm nay ({expenses.length})
-          </h2>
+          <h2 className="mb-3 text-lg font-semibold">Bill hôm nay ({expenses.length})</h2>
           {expenses.length === 0 ? (
             <p style={{ color: "var(--muted)" }}>Chưa có chi tiêu. Thêm bill đầu tiên!</p>
           ) : (
@@ -100,6 +99,6 @@ export default async function HomePage() {
     );
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return <DbSetupGuide detail={message} />;
+    return <SheetsSetupGuide detail={message} />;
   }
 }

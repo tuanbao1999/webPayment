@@ -5,7 +5,7 @@ type Split = {
   id: string;
   amount: number;
   person: { name: string };
-  settlement: { paidAt: Date | null } | null;
+  settlement: { paidAt: Date | string | null } | null;
 };
 
 type Expense = {

@@ -1,38 +1,36 @@
 # Quản lý chi tiêu (webPayment)
 
-Ghi chi tiêu nhóm theo ngày: mức giá 40k/45k/50k, bộ người hay đi, tick đã chuyển khoản.
+Ghi chi tiêu nhóm — dữ liệu lưu trên **Google Sheets** (miễn phí, không giới hạn 24h).
 
 ## Chạy local
 
-```bash
-npm install
-npx prisma db push
-npm run db:seed
-npm run dev
-```
-
-Mở http://localhost:3000
+1. Làm theo [`google-apps-script/README.md`](google-apps-script/README.md) (tạo Sheet + Deploy Web App)
+2. Copy `.env.example` → `.env`, điền `GOOGLE_SCRIPT_URL`
+3. `npm install && npm run dev` → http://localhost:3000
 
 ## Deploy Netlify
 
-1. Push repo lên GitHub, connect Netlify
-2. **Build settings** → **Publish directory**: **XÓA hết** (để trống).  
-   Nếu đang là `/` hoặc `.` → lỗi: *publish directory cannot be the same as the base directory*.  
-   File `netlify.toml` đã đặt `publish = ".next"` — trên UI **không** ghi đè thành thư mục gốc.
-3. Build: `npm run build` (có `prisma db push` trong script)
-4. **Environment variables** (để app chạy thật):
-   - **Key:** `DATABASE_URL`
-   - **Value:** `postgresql://...?sslmode=require` (copy từ Netlify DB)
-   - **Contains secret values:** bật **ON** (Netlify khuyến nghị — ẩn giá trị trên UI, API, build log, CLI)
-   - **Scopes:** **All deploy contexts** (Build + Runtime)
-   - Không commit URL/mật khẩu vào Git — chỉ đặt trên Netlify hoặc file `.env` local
-5. Forms: file `public/forms.html` được detect lúc deploy
-6. Form notifications → Email (tùy chọn) + Webhook → `/.netlify/functions/form-submission`
-7. (Tùy chọn) `NEXT_PUBLIC_NETLIFY_FORM=true` để gửi kèm Netlify Forms khi lưu bill
+1. Connect GitHub, **Publish directory** để trống hoặc `.next` trong `netlify.toml`
+2. **Environment variables:**
+   - `GOOGLE_SCRIPT_URL` — URL Apps Script (**secret**)
+   - `NEXT_PUBLIC_GOOGLE_SHEET_URL` — link mở sheet (tùy chọn)
+3. **Không cần** `DATABASE_URL` / Prisma / Netlify DB
+4. Build: `npm run build`
+
+## Luồng dữ liệu
+
+```mermaid
+flowchart LR
+  app[App_Netlify] -->|POST_JSON| gas[Google_Apps_Script]
+  gas --> sheet[Google_Sheet]
+  forms[Netlify_Forms] -->|webhook| gas
+```
+
+- Thêm bill / tick đã CK → API Next.js → Apps Script → ghi Sheet
+- Mở Sheet → filter, sửa, export Excel từ Google
 
 ## Tính năng
 
-- **Hôm nay**: tổng chi, chưa thu, danh sách bill
-- **Thêm chi tiêu**: tab mức giá / tổng tiền, bộ hay đi, preview
-- **Chi tiết bill**: tick đã CK từng người
-- **Danh bạ**, **Bộ hay đi**, **Mức giá**
+- Hôm nay, thêm chi tiêu (mức giá 40/45/50k), bộ hay đi
+- Tick đã chuyển khoản
+- Xem trực tiếp trên Google Sheet

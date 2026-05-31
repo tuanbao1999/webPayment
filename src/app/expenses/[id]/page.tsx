@@ -25,7 +25,7 @@ export default async function ExpenseDetailPage({
       <div className="card">
         <h2 className="text-lg font-semibold">{expense.description}</h2>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          {formatDateVi(expense.expenseDate)}
+          {formatDateVi(new Date(expense.expenseDate))}
         </p>
         <p className="mt-2 text-2xl font-bold">{formatVnd(expense.totalAmount)}</p>
         <p className="mt-1 text-sm">

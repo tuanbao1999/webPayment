@@ -1,6 +1,5 @@
 [build]
   command = "npm run build"
-  # Phải khác thư mục gốc repo — đừng đặt publish = "/" trên Netlify UI
   publish = ".next"
 
 [[plugins]]
@@ -9,8 +8,6 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--include=dev"
-  # Placeholder để build qua khi chưa khai báo UI — GHI ĐÈ bằng DATABASE_URL thật trên Netlify UI
-  DATABASE_URL = "postgresql://build:build@127.0.0.1:5432/build?sslmode=disable"
 
 [functions]
   directory = "netlify/functions"

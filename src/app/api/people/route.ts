@@ -1,25 +1,33 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { ensureSeed } from "@/lib/ensure-seed";
+import { sheetsRequest } from "@/lib/sheets-api";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  await ensureSeed();
-  const people = await prisma.person.findMany({
-    where: { active: true },
-    orderBy: { name: "asc" },
-  });
-  return NextResponse.json(people);
+  try {
+    const people = await sheetsRequest<{ id: string; name: string; active: boolean }[]>(
+      "getPeople",
+      {},
+      "GET"
+    );
+    return NextResponse.json(people);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Lỗi" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
-  const { name } = await request.json();
-  if (!name?.trim()) {
-    return NextResponse.json({ error: "Nhập tên" }, { status: 400 });
+  try {
+    const { name } = await request.json();
+    const person = await sheetsRequest("addPerson", { name });
+    return NextResponse.json(person);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Lỗi" },
+      { status: 400 }
+    );
   }
-  const person = await prisma.person.create({
-    data: { name: name.trim() },
-  });
-  return NextResponse.json(person);
 }
