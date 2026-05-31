@@ -8,8 +8,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  DATABASE_URL = "file:./prisma/dev.db"
-  # Không bỏ devDependencies khi build (cần prisma, eslint, plugin...)
+  # DATABASE_URL + TURSO_AUTH_TOKEN: đặt trong Netlify UI (Turso), không dùng file SQLite
   NPM_FLAGS = "--include=dev"
 
 [functions]
