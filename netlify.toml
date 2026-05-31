@@ -1,6 +1,7 @@
 [build]
-  # Tạo thư mục DB, migrate, rồi build Next
   command = "npm run build"
+  # Phải khác thư mục gốc repo — đừng đặt publish = "/" trên Netlify UI
+  publish = ".next"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

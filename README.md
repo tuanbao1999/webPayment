@@ -16,7 +16,9 @@ Mở http://localhost:3000
 ## Deploy Netlify
 
 1. Push repo lên GitHub, connect Netlify
-2. **Build settings**: Publish directory để **trống** (plugin `@netlify/plugin-nextjs` tự xử lý). Nếu đặt `/` hoặc repo root → deploy lỗi.
+2. **Build settings** → **Publish directory**: **XÓA hết** (để trống).  
+   Nếu đang là `/` hoặc `.` → lỗi: *publish directory cannot be the same as the base directory*.  
+   File `netlify.toml` đã đặt `publish = ".next"` — trên UI **không** ghi đè thành thư mục gốc.
 3. Build: `npm run build` (có `prisma db push` trong script)
 4. Env: `DATABASE_URL` = `file:./prisma/dev.db` hoặc [Turso](https://turso.tech) (`libsql://...`) cho production
 4. Forms: file `public/forms.html` được detect lúc deploy
