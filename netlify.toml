@@ -5,7 +5,10 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
+  NODE_VERSION = "20"
   DATABASE_URL = "file:./prisma/dev.db"
+  # Không bỏ devDependencies khi build (cần prisma, eslint, plugin...)
+  NPM_FLAGS = "--include=dev"
 
 [functions]
   directory = "netlify/functions"
